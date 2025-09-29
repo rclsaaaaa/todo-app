@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
                 if (!user || !user.passwordHash) return null;
                 const ok = await bcrypt.compare(credentials.password, user.passwordHash);
                 if (!ok) return null;
-                return { id: user.id, email: user.email } as any;
+                return { id: user.id, email: user.email };
             },
         }),
     ],
@@ -32,8 +32,8 @@ export const authOptions: NextAuthOptions = {
     },
     callbacks: {
         async session({ session, token }) {
-            if (session.user) {
-                (session.user as any).id = token.sub;
+            if (session.user && token.sub) {
+                session.user.id = token.sub;
             }
             return session;
         },

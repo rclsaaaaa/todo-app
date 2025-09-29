@@ -6,10 +6,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 // PATCH: todoの削除フラグを立てる（ソフトデリート）
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
     const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any)?.id) {
+    if (!session || !session.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
     const todoId = params.id;
     const todo = await prisma.todos.findUnique({ where: { id: todoId } });
     if (!todo || todo.userId !== userId) {

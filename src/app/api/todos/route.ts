@@ -6,10 +6,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 // GET: ユーザーのtodo一覧取得
 export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any)?.id) {
+    if (!session || !session.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
     const todos = await prisma.todos.findMany({
         where: { userId, deleted: false },
         orderBy: { createdAt: "desc" },
@@ -20,10 +20,10 @@ export async function GET(req: NextRequest) {
 // POST: todo新規作成
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any)?.id) {
+    if (!session || !session.user?.id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
     const { title } = await req.json();
     if (!title) {
         return NextResponse.json({ error: "Title is required" }, { status: 400 });

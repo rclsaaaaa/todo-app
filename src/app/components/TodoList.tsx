@@ -2,13 +2,14 @@
 import { useEffect, useState } from "react";
 
 export default function TodoList() {
-    const [todos, setTodos] = useState<any[]>([]);
+    type Todo = { id: string; title: string; completed: boolean };
+    const [todos, setTodos] = useState<Todo[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetch("/api/todos")
             .then(res => res.json())
-            .then(data => setTodos(data))
+            .then((data: unknown) => setTodos(Array.isArray(data) ? data as Todo[] : []))
             .finally(() => setLoading(false));
     }, []);
 

@@ -1,54 +1,30 @@
 import NextAuth from "next-auth";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/app/lib/prisma";
-import EmailProvider from "next-auth/providers/email";
+import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
-import type { Adapter, VerificationToken } from "next-auth/adapters";
+import { prisma } from "@/app/lib/prisma";
+import bcrypt from "bcryptjs";
 
 console.log("[auth] route loaded");
 
-const baseAdapter = PrismaAdapter(prisma);
-const adapter: Adapter = {
-    ...baseAdapter,
-    async createVerificationToken(data: VerificationToken) {
-        console.log("[auth] createVerificationToken input:", data);
-        if (!baseAdapter.createVerificationToken) {
-            console.warn("[auth] createVerificationToken not implemented by adapter");
-            throw new Error("createVerificationToken not implemented");
-        }
-        const result = await baseAdapter.createVerificationToken(data as any);
-        console.log("[auth] createVerificationToken result:", result);
-        return result as VerificationToken;
-    },
-    async useVerificationToken(params) {
-        console.log("[auth] useVerificationToken input:", params);
-        if (!baseAdapter.useVerificationToken) {
-            console.warn("[auth] useVerificationToken not implemented by adapter");
-            throw new Error("useVerificationToken not implemented");
-        }
-        const result = await baseAdapter.useVerificationToken(params as any);
-        console.log("[auth] useVerificationToken result:", result);
-        return result as any;
-    },
-};
-
 export const authOptions: NextAuthOptions = {
-    adapter,
     providers: [
-        EmailProvider({
-            server: process.env.EMAIL_SERVER,
-            from: process.env.EMAIL_FROM,
-            normalizeIdentifier(identifier) {
-                const value = identifier.toLowerCase().trim();
-                console.log("[auth] email identifier:", value);
-                return value;
+        CredentialsProvider({
+            name: "Credentials",
+            credentials: {
+                email: { label: "メールアドレス", type: "email" },
+                password: { label: "パスワード", type: "password" },
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) return null;
+                const user = await prisma.users.findUnique({ where: { email: credentials.email } });
+                if (!user || !user.passwordHash) return null;
+                const ok = await bcrypt.compare(credentials.password, user.passwordHash);
+                if (!ok) return null;
+                return { id: user.id, email: user.email } as any;
             },
         }),
     ],
-    session: {
-        strategy: "jwt",
-    },
-    debug: true,
+    session: { strategy: "jwt" },
     secret: process.env.NEXTAUTH_SECRET,
     pages: {
         signIn: "/auth/signin",
@@ -60,17 +36,6 @@ export const authOptions: NextAuthOptions = {
                 (session.user as any).id = token.sub;
             }
             return session;
-        },
-    },
-    logger: {
-        error(code, metadata) {
-            console.error("[next-auth][error]", code, metadata);
-        },
-        warn(code) {
-            console.warn("[next-auth][warn]", code);
-        },
-        debug(code, metadata) {
-            console.debug("[next-auth][debug]", code, metadata);
         },
     },
 };
